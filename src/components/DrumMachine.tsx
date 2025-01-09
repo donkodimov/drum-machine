@@ -101,7 +101,7 @@ export function DrumMachine() {
   // Preload audio files when component mounts
   useEffect(() => {
     console.log('Preloading audio files...');
-    Object.entries(currentBank).forEach(([key, sound]) => {
+    Object.entries(currentBank).forEach(([_, sound]) => {
       const audio = new Audio();
       audio.addEventListener('canplaythrough', () => {
         console.log('Audio preloaded successfully:', sound.url);
