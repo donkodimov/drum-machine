@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Drum Sounds</title>
+  <script>
+    function audioBufferToWav(buffer) {
+      const numOfChan = buffer.numberOfChannels;
+      const length = buffer.length * numOfChan * 2 + 44;
+      const buffer2 = new ArrayBuffer(length);
+      const view = new DataView(buffer2);
+      let pos = 0;
+
+      // write WAVE header
+      writeString("RIFF"); pos += 4;
+      view.setUint32(pos, 36 + buffer.length * numOfChan * 2, true); pos += 4;
+      writeString("WAVE"); pos += 4;
+      writeString("fmt "); pos += 4;
+      view.setUint32(pos, 16, true); pos += 4; // SubChunk1Size is 16
+      view.setUint16(pos, 1, true); pos += 2; // PCM is format 1
+      view.setUint16(pos, numOfChan, true); pos += 2;
+      view.setUint32(pos, buffer.sampleRate, true); pos += 4;
+      view.setUint32(pos, buffer.sampleRate * numOfChan * 2, true); pos += 4; // byte rate
+      view.setUint16(pos, numOfChan * 2, true); pos += 2; // block align
+      view.setUint16(pos, 16, true); pos += 2; // bits per sample
+      writeString("data"); pos += 4;
+      view.setUint32(pos, buffer.length * numOfChan * 2, true); pos += 4;
+
+      // write interleaved data
+      const channelData = [];
+      for (let i = 0; i < buffer.numberOfChannels; i++) {
+        channelData.push(buffer.getChannelData(i));
+      }
+
+      while (pos < length) {
+        for (let i = 0; i < numOfChan; i++) {
+          let sample = Math.max(-1, Math.min(1, channelData[i][(pos - 44) / 2]));
+          sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+      }
+
+      function writeString(s) {
+        for (let i = 0; i < s.length; i++) {
+          view.setUint8(pos + i, s.charCodeAt(i));
+        }
+      }
+
+      return buffer2;
+    }
+
+    function downloadBuffer(buffer, filename) {
+      const wav = audioBufferToWav(buffer);
+      const blob = new Blob([wav], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function generateSounds() {
+      const audioContext = new AudioContext();
+      const sampleRate = audioContext.sampleRate;
+      const duration = 0.5;
+      const frameCount = sampleRate * duration;
+
+      // Create kick drum sound
+      const kickBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
+      const kickData = kickBuffer.getChannelData(0);
+      for (let i = 0; i < frameCount; i++) {
+        const t = i / sampleRate;
+        const frequency = 150 * Math.exp(-30 * t);
+        kickData[i] = Math.sin(2 * Math.PI * frequency * t) * Math.exp(-8 * t);
+      }
+
+      // Create snare sound
+      const snareBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
+      const snareData = snareBuffer.getChannelData(0);
+      for (let i = 0; i < frameCount; i++) {
+        const t = i / sampleRate;
+        const noise = Math.random() * 2 - 1;
+        snareData[i] = noise * Math.exp(-5 * t);
+      }
+
+      // Create hi-hat sound
+      const hihatBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
+      const hihatData = hihatBuffer.getChannelData(0);
+      for (let i = 0; i < frameCount; i++) {
+        const t = i / sampleRate;
+        const noise = Math.random() * 2 - 1;
+        hihatData[i] = noise * Math.exp(-50 * t);
+      }
+
+      // Download sounds
+      downloadBuffer(kickBuffer, 'drums/kick.wav');
+      downloadBuffer(snareBuffer, 'drums/snare.wav');
+      downloadBuffer(hihatBuffer, 'drums/hihat.wav');
+
+      document.body.innerHTML += '<p>Sounds generated! Please move the downloaded files to the public/drums directory.</p>';
+    }
+  </script>
+</head>
+<body>
+  <h1>Drum Sound Generator</h1>
+  <button onclick="generateSounds()">Generate Sounds</button>
+</body>
+</html> 

@@ -1,65 +1,41 @@
-const { useState, useEffect } = React;
+import { useState, useEffect } from 'react';
+import { Switch } from '@/components/ui/Switch';
+import { Slider } from '@/components/ui/Slider';
 
-// Simple slider component
-const Slider = ({ value, onValueChange, disabled }) => (
-  <input
-    type="range"
-    min="0"
-    max="100"
-    value={value}
-    onChange={(e) => onValueChange([parseInt(e.target.value)])}
-    disabled={disabled}
-    className="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer"
-  />
-);
+interface Sound {
+  name: string;
+  url: string;
+}
 
-// Simple switch component
-const Switch = ({ checked, onCheckedChange, disabled }) => (
-  <button
-    role="switch"
-    aria-checked={checked}
-    onClick={() => onCheckedChange(!checked)}
-    disabled={disabled}
-    className={`
-      w-11 h-6 rounded-full transition-colors duration-200
-      ${checked ? 'bg-gray-400' : 'bg-gray-700'}
-      ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-    `}
-  >
-    <span
-      className={`
-        block w-5 h-5 bg-white rounded-full shadow transform transition-transform duration-200
-        ${checked ? 'translate-x-6' : 'translate-x-1'}
-      `}
-    />
-  </button>
-);
+interface Bank {
+  [key: string]: Sound;
+}
 
-const bankOne = {
-  'Q': { name: 'Heater 1', url: 'drums/kick.wav' },
-  'W': { name: 'Heater 2', url: 'drums/snare.wav' },
-  'E': { name: 'Heater 3', url: 'drums/hihat.wav' },
-  'A': { name: 'Heater 4', url: 'drums/kick.wav' },
-  'S': { name: 'Clap', url: 'drums/snare.wav' },
-  'D': { name: 'Open HH', url: 'drums/hihat.wav' },
-  'Z': { name: 'Kick n\' Hat', url: 'drums/kick.wav' },
-  'X': { name: 'Kick', url: 'drums/snare.wav' },
-  'C': { name: 'Closed HH', url: 'drums/hihat.wav' }
+const bankOne: Bank = {
+  'Q': { name: 'Heater 1', url: '/drums/kick.wav' },
+  'W': { name: 'Heater 2', url: '/drums/snare.wav' },
+  'E': { name: 'Heater 3', url: '/drums/hihat.wav' },
+  'A': { name: 'Heater 4', url: '/drums/kick.wav' },
+  'S': { name: 'Clap', url: '/drums/snare.wav' },
+  'D': { name: 'Open HH', url: '/drums/hihat.wav' },
+  'Z': { name: 'Kick n\' Hat', url: '/drums/kick.wav' },
+  'X': { name: 'Kick', url: '/drums/snare.wav' },
+  'C': { name: 'Closed HH', url: '/drums/hihat.wav' }
 };
 
-const bankTwo = {
-  'Q': { name: 'Chord 1', url: 'drums/kick.wav' },
-  'W': { name: 'Chord 2', url: 'drums/snare.wav' },
-  'E': { name: 'Chord 3', url: 'drums/hihat.wav' },
-  'A': { name: 'Shaker', url: 'drums/kick.wav' },
-  'S': { name: 'Open HH', url: 'drums/snare.wav' },
-  'D': { name: 'Closed HH', url: 'drums/hihat.wav' },
-  'Z': { name: 'Punchy Kick', url: 'drums/kick.wav' },
-  'X': { name: 'Side Stick', url: 'drums/snare.wav' },
-  'C': { name: 'Snare', url: 'drums/hihat.wav' }
+const bankTwo: Bank = {
+  'Q': { name: 'Chord 1', url: '/drums/kick.wav' },
+  'W': { name: 'Chord 2', url: '/drums/snare.wav' },
+  'E': { name: 'Chord 3', url: '/drums/hihat.wav' },
+  'A': { name: 'Shaker', url: '/drums/kick.wav' },
+  'S': { name: 'Open HH', url: '/drums/snare.wav' },
+  'D': { name: 'Closed HH', url: '/drums/hihat.wav' },
+  'Z': { name: 'Punchy Kick', url: '/drums/kick.wav' },
+  'X': { name: 'Side Stick', url: '/drums/snare.wav' },
+  'C': { name: 'Snare', url: '/drums/hihat.wav' }
 };
 
-function DrumMachine() {
+export function DrumMachine() {
   const [power, setPower] = useState(true);
   const [bank, setBank] = useState(false);
   const [volume, setVolume] = useState(0.5);
@@ -67,7 +43,7 @@ function DrumMachine() {
   
   const currentBank = bank ? bankTwo : bankOne;
 
-  const playSound = (key) => {
+  const playSound = (key: string) => {
     if (!power) return;
     
     const sound = currentBank[key];
@@ -111,7 +87,7 @@ function DrumMachine() {
   };
 
   useEffect(() => {
-    const handleKeyPress = (e) => {
+    const handleKeyPress = (e: KeyboardEvent) => {
       const key = e.key.toUpperCase();
       if (currentBank[key]) {
         playSound(key);
@@ -122,26 +98,26 @@ function DrumMachine() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [power, bank, volume]);
 
-  // Add debug logging for audio loading
+  // Preload audio files when component mounts
   useEffect(() => {
-    console.log('Loading audio files for bank:', bank ? 'Bank Two' : 'Bank One');
-    Object.entries(currentBank).forEach(([key, sound]) => {
-      console.log('Preloading audio:', { key, url: sound.url });
-      const audio = new Audio(sound.url);
+    console.log('Preloading audio files...');
+    Object.entries(currentBank).forEach(([_, sound]) => {
+      const audio = new Audio();
       audio.addEventListener('canplaythrough', () => {
-        console.log('Audio loaded successfully:', sound.url);
+        console.log('Audio preloaded successfully:', sound.url);
       });
       audio.addEventListener('error', (e) => {
-        console.error('Error loading audio:', sound.url, e);
+        console.error('Error preloading audio:', sound.url, e);
       });
+      audio.src = sound.url;
       audio.load();
     });
-  }, [bank]);
+  }, []);
 
   return (
-    <div id="drum-machine" className="bg-gradient-to-br from-gray-700 to-gray-800 p-8 rounded-lg shadow-xl max-w-2xl mx-auto mt-8">
+    <div id="drum-machine" className="bg-gradient-to-br from-gray-700 to-gray-800 p-8 rounded-lg shadow-xl max-w-2xl mx-auto">
       <div className="flex justify-between items-start mb-8">
-        <h1 className="text-white text-2xl font-bold">FCC</h1>
+        <h1 className="text-white text-2xl font-bold">Drum Machine</h1>
         <div className="flex items-center gap-2">
           <span className="text-white text-sm">Power</span>
           <div className="w-12 h-6 flex items-center">
@@ -187,7 +163,7 @@ function DrumMachine() {
             <label className="text-white text-sm block">Volume</label>
             <Slider
               value={volume * 100}
-              onValueChange={(value) => {
+              onValueChange={(value: number[]) => {
                 setVolume(value[0] / 100);
                 setDisplay(`Volume: ${value[0]}`);
               }}
@@ -209,8 +185,4 @@ function DrumMachine() {
       </div>
     </div>
   );
-}
-
-// Render the app
-ReactDOM.render(<DrumMachine />, document.getElementById('root'));
-
+} 

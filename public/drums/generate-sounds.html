@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Generate Drum Sounds</title>
+</head>
+<body>
+  <h1>Drum Sound Generator</h1>
+  <button onclick="generateAndDownloadAll()">Generate All Sounds</button>
+
+  <script>
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    function createKick() {
+      const duration = 0.25;
+      const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      
+      const frequency = 150;
+      const decay = 5;
+      
+      for (let i = 0; i < buffer.length; i++) {
+        const t = i / audioContext.sampleRate;
+        const amplitude = Math.exp(-decay * t);
+        data[i] = amplitude * Math.sin(2 * Math.PI * frequency * t);
+      }
+      
+      return buffer;
+    }
+
+    function createSnare() {
+      const duration = 0.2;
+      const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      
+      const decay = 10;
+      
+      for (let i = 0; i < buffer.length; i++) {
+        const t = i / audioContext.sampleRate;
+        const amplitude = Math.exp(-decay * t);
+        data[i] = amplitude * (Math.random() * 2 - 1);
+      }
+      
+      return buffer;
+    }
+
+    function createHiHat() {
+      const duration = 0.1;
+      const buffer = audioContext.createBuffer(1, audioContext.sampleRate * duration, audioContext.sampleRate);
+      const data = buffer.getChannelData(0);
+      
+      const decay = 20;
+      
+      for (let i = 0; i < buffer.length; i++) {
+        const t = i / audioContext.sampleRate;
+        const amplitude = Math.exp(-decay * t);
+        data[i] = amplitude * (Math.random() * 2 - 1);
+      }
+      
+      return buffer;
+    }
+
+    function createAndDownloadAudio(audioBuffer, filename) {
+      const wavData = audioBufferToWav(audioBuffer);
+      const blob = new Blob([wavData], { type: 'audio/wav' });
+      const url = URL.createObjectURL(blob);
+      
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      
+      URL.revokeObjectURL(url);
+    }
+
+    function generateAndDownloadAll() {
+      createAndDownloadAudio(createKick(), 'kick.wav');
+      createAndDownloadAudio(createSnare(), 'snare.wav');
+      createAndDownloadAudio(createHiHat(), 'hihat.wav');
+    }
+
+    // WAV file format utilities
+    function writeString(view, offset, string) {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    }
+
+    function audioBufferToWav(buffer) {
+      const numChannels = buffer.numberOfChannels;
+      const sampleRate = buffer.sampleRate;
+      const format = 1; // PCM
+      const bitDepth = 16;
+      
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      
+      const buffer32 = buffer.getChannelData(0);
+      const dataSize = buffer32.length * bytesPerSample;
+      const fileSize = 44 + dataSize;
+      
+      const arrayBuffer = new ArrayBuffer(fileSize);
+      const view = new DataView(arrayBuffer);
+      
+      // RIFF chunk descriptor
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, fileSize - 8, true);
+      writeString(view, 8, 'WAVE');
+      
+      // fmt sub-chunk
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, format, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, sampleRate * blockAlign, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitDepth, true);
+      
+      // data sub-chunk
+      writeString(view, 36, 'data');
+      view.setUint32(40, dataSize, true);
+      
+      // write PCM samples
+      const offset = 44;
+      for (let i = 0; i < buffer32.length; i++) {
+        const sample = Math.max(-1, Math.min(1, buffer32[i]));
+        view.setInt16(offset + i * bytesPerSample, sample * 0x7FFF, true);
+      }
+      
+      return arrayBuffer;
+    }
+  </script>
+</body>
+</html> 
